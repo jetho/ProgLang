@@ -84,8 +84,8 @@ instance Error TypeError where
     strMsg s = OtherError s
 
 
-(\\) :: TypeEnv -> (EVar, Scheme) -> TypeEnv
-(TypeEnv env) \\ (x, s) =  TypeEnv $ Map.insert x s env
+update :: TypeEnv -> EVar -> Scheme -> TypeEnv
+update (TypeEnv env) x s =  TypeEnv $ Map.insert x s env
 
 nullSubst :: Subst
 nullSubst = Map.empty
@@ -123,7 +123,7 @@ ti (TypeEnv env) (EVar x) =
 
 ti env (EAbs x e) =
     do tv       <- freshTVar "a"
-       let env'  = env \\ (x, Scheme [] tv)
+       let env'  = update env x $ Scheme [] tv
        (s1, t1) <- ti env' e
        return (s1, TFun (apply s1 tv) t1)
 
@@ -138,7 +138,8 @@ ti env (ELet x e1 e2) =
     do (s1, t1) <- ti env e1
        let env'  = apply s1 env
            t'    = generalize env' t1
-       (s2, t2) <- ti (env' \\ (x, t')) e2
+           env'' = update env' x t'
+       (s2, t2) <- ti env'' e2
        return (s1 ◦ s2, t2)
 
 noSubst :: Type -> TI (Subst, Type)
