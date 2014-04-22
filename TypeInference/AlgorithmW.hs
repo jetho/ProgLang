@@ -51,13 +51,13 @@ instance Substitutable Type where
     ftv TInt              = Set.empty
     ftv TBool             = Set.empty
     ftv (TVar a)          = Set.singleton a
-    ftv (TFun t1 t2)      = ftv t1 `Set.union` ftv t2
+    ftv (TFun t1 t2)      = (ftv t1) `Set.union` (ftv t2)
 
 
 instance Substitutable Scheme where
     apply s (Scheme vars t) = Scheme vars $ apply s' t 
                               where s' = foldr Map.delete s vars
-    ftv (Scheme vars t)     = ftv t `Set.difference` Set.fromList vars
+    ftv (Scheme vars t)     = (ftv t) `Set.difference` (Set.fromList vars)
 
 
 instance Substitutable a => Substitutable [a] where
@@ -80,7 +80,7 @@ data TypeError = UnboundVariable String
                | OtherError String
 
 instance Error TypeError where
-    noMsg = OtherError "A Type Error!"
+    noMsg    = OtherError "A Type Error!"
     strMsg s = OtherError s
 
 
@@ -98,8 +98,8 @@ generalize env t  =   Scheme vars t
     where vars = Set.toList $ (ftv t) `Set.difference` (ftv env)
 
 fresh :: TI Int
-fresh = do s <- get
-           let n = tiSupply s
+fresh = do s     <- get
+           let n  = tiSupply s
            put $ s { tiSupply = n + 1 }
            return n
 
@@ -108,8 +108,8 @@ freshTVar prefix = fresh >>= return . TVar . (prefix ++) . show
 
 instantiate :: Scheme -> TI Type
 instantiate (Scheme vars t) = 
-    do vars' <- mapM (\ _ -> freshTVar "a") vars
-       let s = Map.fromList $ zip vars vars'
+    do vars' <- mapM (const $ freshTVar "a") vars
+       let s  = Map.fromList $ zip vars vars'
        return $ apply s t
 
 ti :: TypeEnv -> Exp -> TI (Subst, Type)
@@ -122,8 +122,8 @@ ti (TypeEnv env) (EVar x) =
           (Map.lookup x env) 
 
 ti env (EAbs x e) =
-    do tv <- freshTVar "a"
-       let env' = env \\ (x, Scheme [] tv)
+    do tv       <- freshTVar "a"
+       let env'  = env \\ (x, Scheme [] tv)
        (s1, t1) <- ti env' e
        return (s1, TFun (apply s1 tv) t1)
 
