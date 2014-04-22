@@ -1,17 +1,21 @@
-{-# LANGUAGE PackageImports #-}
 
+{-# LANGUAGE PackageImports #-}
+{-# LANGUAGE TupleSections #-}
 
 module AlgorithmW where
 
-import qualified Data.Map as M
-import qualified Data.Set as S
+import qualified Data.Map as Map
+import qualified Data.Set as Set
 import "mtl" Control.Monad.Error
-import "mtl" Control.Monad.Reader
 import "mtl" Control.Monad.State
-import "mtl" Control.Monad.Identity
 import qualified Text.PrettyPrint as PP
 
-data Exp = EVar String
+
+type EVar = String
+type TVar = String
+
+
+data Exp = EVar EVar
          | ELit Lit
          | EApp Exp Exp
          | EAbs String Exp
@@ -22,24 +26,53 @@ data Lit = LInt Integer
          | LBool Bool
          deriving (Eq, Ord)
 
-data Type = TVar String
+data Type = TVar TVar
           | TInt
           | TBool
           | TFun Type Type
           deriving (Eq, Ord)
 
-data Scheme = Scheme [String] Type
+data Scheme = Scheme [TVar] Type
 
-type Subst = M.Map String Type
+newtype TypeEnv = TypeEnv (Map.Map EVar Scheme)
 
-newtype TypeEnv = TypeEnv (M.Map String Scheme)
+type Subst = Map.Map TVar Type
 
-data TIEnv = TIEnv {}
 
-data TIState = TIState { tiSupply :: Int,
-                         tiSubst :: Subst}
+class Substitutable a where 
+    apply :: Subst -> a -> a
+    ftv   :: a -> Set.Set TVar
 
-type TI a = ErrorT TypeError (ReaderT TIEnv (StateT TIState Identity)) a
+instance Substitutable Type where
+    apply _  TInt         = TInt
+    apply _  TBool        = TBool
+    apply s  t@(TVar a)   = Map.findWithDefault t a s
+    apply s  (TFun t1 t2) = TFun (apply s t1) (apply s t2)
+    ftv TInt              = Set.empty
+    ftv TBool             = Set.empty
+    ftv (TVar a)          = Set.singleton a
+    ftv (TFun t1 t2)      = ftv t1 `Set.union` ftv t2
+
+
+instance Substitutable Scheme where
+    apply s (Scheme vars t) = Scheme vars $ apply s' t 
+                              where s' = foldr Map.delete s vars
+    ftv (Scheme vars t)     = ftv t `Set.difference` Set.fromList vars
+
+
+instance Substitutable a => Substitutable [a] where
+    apply = map . apply
+    ftv   = foldr Set.union Set.empty . map ftv
+
+
+instance Substitutable TypeEnv where
+    apply s (TypeEnv env) = TypeEnv $ Map.map (apply s) env
+    ftv (TypeEnv env)     = ftv $ Map.elems env
+
+
+data TIState = TIState { tiSupply :: Int }
+
+type TI a = ErrorT TypeError (State TIState) a
 
 data TypeError = UnboundVariable String
                | NotUnifiable Type Type
@@ -50,40 +83,65 @@ instance Error TypeError where
     noMsg = OtherError "A Type Error!"
     strMsg s = OtherError s
 
-class Types a where
-    ftv   :: a -> S.Set String
-    subst :: Subst -> a -> a
 
-instance Types Type where
-    ftv (TVar n)         = S.singleton n
-    ftv TInt             = S.empty
-    ftv TBool            = S.empty
-    ftv (TFun t1 t2)     = ftv t1 `S.union` ftv t2
-    subst s v@(TVar n)   = maybe v id $ M.lookup n s
-    subst s (TFun t1 t2) = TFun (subst s t1) (subst s t2)
-    subst _ t            = t
-
-instance Types Scheme where
-    ftv (Scheme vars t)     = (ftv t) `S.difference` (S.fromList vars)
-    subst s (Scheme vars t) = Scheme vars (subst (foldr M.delete s vars) t)
-
-instance Types a => Types [a] where
-    ftv   = foldr S.union S.empty . map ftv
-    subst = map . subst
-
-instance Types TypeEnv where
-    ftv (TypeEnv env) = ftv (M.elems env)
-    subst s (TypeEnv env) = TypeEnv (M.map (subst s) env)
+(\\) :: TypeEnv -> (EVar, Scheme) -> TypeEnv
+(TypeEnv env) \\ (x, s) =  TypeEnv $ Map.insert x s env
 
 nullSubst :: Subst
-nullSubst = M.empty
+nullSubst = Map.empty
 
-composeSubst :: Subst -> Subst -> Subst
-composeSubst s1 s2 = M.map (subst s1) s2 `M.union` s1
-
-remove :: TypeEnv -> String -> TypeEnv
-remove (TypeEnv env) var = TypeEnv (M.delete var env)
+(◦) :: Subst -> Subst -> Subst
+s1 ◦ s2 = Map.map (apply s1) s2 `Map.union` s1
 
 generalize :: TypeEnv -> Type -> Scheme
-generalize env t = Scheme vars t
-    where vars = S.toList ((ftv t) `S.difference` (ftv env))
+generalize env t  =   Scheme vars t
+    where vars = Set.toList $ (ftv t) `Set.difference` (ftv env)
+
+fresh :: TI Int
+fresh = do s <- get
+           let n = tiSupply s
+           put $ s { tiSupply = n + 1 }
+           return n
+
+freshTVar :: String -> TI Type
+freshTVar prefix = fresh >>= return . TVar . (prefix ++) . show 
+
+instantiate :: Scheme -> TI Type
+instantiate (Scheme vars t) = 
+    do vars' <- mapM (\ _ -> freshTVar "a") vars
+       let s = Map.fromList $ zip vars vars'
+       return $ apply s t
+
+ti :: TypeEnv -> Exp -> TI (Subst, Type)
+ti _ (ELit (LInt _))  = noSubst TInt
+ti _ (ELit (LBool _)) = noSubst TBool
+
+ti (TypeEnv env) (EVar x) = 
+    maybe (throwError $ UnboundVariable x)
+          (instantiate >=> noSubst)
+          (Map.lookup x env) 
+
+ti env (EAbs x e) =
+    do tv <- freshTVar "a"
+       let env' = env \\ (x, Scheme [] tv)
+       (s1, t1) <- ti env' e
+       return (s1, TFun (apply s1 tv) t1)
+
+ti env (EApp e1 e2) =
+    do  tv       <- freshTVar "a"
+        (s1, t1) <- ti env e1
+        (s2, t2) <- ti (apply s1 env) e2
+        s3       <- unify (apply s2 t1) (TFun t2 tv)
+        return (s3 ◦ s2 ◦ s1, apply s3 tv)
+
+ti env (ELet x e1 e2) =
+    do (s1, t1) <- ti env e1
+       let env'  = apply s1 env
+           t'    = generalize env' t1
+       (s2, t2) <- ti (env' \\ (x, t')) e2
+       return (s1 ◦ s2, t2)
+
+noSubst :: Type -> TI (Subst, Type)
+noSubst = return . (nullSubst,)
+
+unify = undefined
