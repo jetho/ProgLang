@@ -162,9 +162,9 @@ noSubst = return . (nullSubst,)
 
 
 unify :: Type -> Type -> TI Subst
-unify (TFun l r) (TFun l' r') =
-    do s1 <- unify l l'
-       s2 <- unify (apply s1 r) (apply s1 r')
+unify (TFun l1 r1) (TFun l2 r2) =
+    do s1 <- unify l1 l2
+       s2 <- unify (apply s1 r1) (apply s1 r2)
        return (s1 ◦ s2)
 
 unify (TVar a) t  = varBind a t
