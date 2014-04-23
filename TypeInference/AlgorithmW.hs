@@ -94,7 +94,7 @@ instance Error TypeError where
 
 instance Show TypeError where
     show (UnboundVariable v)  = "Unbound Variable: " ++ v
-    show (Circularity a t)    = "Circular Type Structure: " ++ a ++ " vs. " ++ (show t)
+    show (Circularity a t)    = "Circular Type Structure: " ++ a ++ " = " ++ (show t)
     show (NotUnifiable t1 t2) = "Types not unifiable: " ++ (show t1) ++ " vs. " ++ (show t2)
 
 
@@ -183,11 +183,10 @@ occursIn = Set.member
 
 
 typeInference :: TypeEnv -> Exp -> Either TypeError Type
-typeInference env expr = 
-    do (s, t) <- runTI (ti env expr)
-       return $ apply s t
+typeInference env exp  = selfApply `fmap` runTI (ti env exp)  
     where runTI        = flip evalState initialState . runErrorT
           initialState = TIState { tiSupply = 0 }
+          selfApply    = uncurry apply
 
 emptyEnv :: TypeEnv
 emptyEnv = TypeEnv Map.empty
@@ -198,14 +197,14 @@ emptyEnv = TypeEnv Map.empty
 instance Show Type where
     showsPrec _ = shows . prType
 
-prType ::  Type -> PP.Doc
-prType (TVar a)    =   PP.text a
-prType TInt        =   PP.text "Int"
-prType TBool       =   PP.text "Bool"
-prType (TFun t s)  =   prParenType t PP.<+> PP.text "->" PP.<+> prType s
+prType :: Type -> PP.Doc
+prType (TVar a)    = PP.text a
+prType TInt        = PP.text "Int"
+prType TBool       = PP.text "Bool"
+prType (TFun t s)  = prParenType t PP.<+> PP.text "->" PP.<+> prType s
 
-prParenType     ::  Type -> PP.Doc
-prParenType  t  =   case t of
-                        TFun _ _  -> PP.parens (prType t)
-                        _         -> prType t
+prParenType :: Type -> PP.Doc
+prParenType t = case t of
+                    TFun _ _ -> PP.parens (prType t)
+                    _        -> prType t
 
