@@ -2,7 +2,17 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE TupleSections #-}
 
-module AlgorithmW where
+
+module AlgorithmW ( TyVar,
+                    Exp(..),
+                    Type(..),
+                    Lit(..),
+                    Scheme(..),
+                    TypeEnv(..),
+                    TypeError(..),
+                    emptyEnv,
+                    typeInference ) where
+
 
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -11,11 +21,10 @@ import "mtl" Control.Monad.State
 import qualified Text.PrettyPrint as PP
 
 
-type EVar = String
-type TVar = String
+type TyVar = String
 
 
-data Exp = EVar EVar
+data Exp = EVar String
          | ELit Lit
          | EApp Exp Exp
          | EAbs String Exp
@@ -26,22 +35,22 @@ data Lit = LInt Integer
          | LBool Bool
          deriving (Eq, Ord)
 
-data Type = TVar TVar
+data Type = TVar TyVar
           | TInt
           | TBool
           | TFun Type Type
           deriving (Eq, Ord)
 
-data Scheme = Scheme [TVar] Type
+data Scheme = Scheme [TyVar] Type
 
-newtype TypeEnv = TypeEnv (Map.Map EVar Scheme)
+newtype TypeEnv = TypeEnv (Map.Map String Scheme)
 
-type Subst = Map.Map TVar Type
+type Subst = Map.Map TyVar Type
 
 
 class Substitutable a where 
     apply :: Subst -> a -> a
-    ftv   :: a -> Set.Set TVar
+    ftv   :: a -> Set.Set TyVar
 
 instance Substitutable Type where
     apply _  TInt         = TInt
@@ -76,15 +85,20 @@ type TI a = ErrorT TypeError (State TIState) a
 
 data TypeError = UnboundVariable String
                | NotUnifiable Type Type
-               | Circularity String Type
+               | Circularity TyVar Type
                | OtherError String
 
 instance Error TypeError where
     noMsg    = OtherError "A Type Error!"
     strMsg s = OtherError s
 
+instance Show TypeError where
+    show (UnboundVariable v)  = "Unbound Variable: " ++ v
+    show (Circularity a t)    = "Circular Type Structure: " ++ a ++ " vs. " ++ (show t)
+    show (NotUnifiable t1 t2) = "Types not unifiable: " ++ (show t1) ++ " vs. " ++ (show t2)
 
-update :: TypeEnv -> EVar -> Scheme -> TypeEnv
+
+update :: TypeEnv -> String -> Scheme -> TypeEnv
 update (TypeEnv env) x s =  TypeEnv $ Map.insert x s env
 
 nullSubst :: Subst
@@ -111,6 +125,7 @@ instantiate (Scheme vars t) =
     do vars' <- mapM (const $ freshTVar "a") vars
        let s  = Map.fromList $ zip vars vars'
        return $ apply s t
+
 
 ti :: TypeEnv -> Exp -> TI (Subst, Type)
 ti _ (ELit (LInt _))  = noSubst TInt
@@ -145,4 +160,52 @@ ti env (ELet x e1 e2) =
 noSubst :: Type -> TI (Subst, Type)
 noSubst = return . (nullSubst,)
 
-unify = undefined
+
+unify :: Type -> Type -> TI Subst
+unify (TFun l r) (TFun l' r') =
+    do s1 <- unify l l'
+       s2 <- unify (apply s1 r) (apply s1 r')
+       return (s1 ◦ s2)
+
+unify (TVar a) t  = varBind a t
+unify t (TVar a)  = varBind a t
+unify TInt TInt   = return nullSubst
+unify TBool TBool = return nullSubst
+unify t1 t2       = throwError $ NotUnifiable t1 t2
+
+varBind :: TyVar -> Type -> TI Subst
+varBind a t | t == TVar a          = return nullSubst
+            | a `occursIn` (ftv t) = throwError $ Circularity a t
+            | otherwise            = return (Map.singleton a t)
+
+occursIn :: TyVar -> Set.Set TyVar -> Bool
+occursIn = Set.member
+
+
+typeInference :: TypeEnv -> Exp -> Either TypeError Type
+typeInference env expr = 
+    do (s, t) <- runTI (ti env expr)
+       return $ apply s t
+    where runTI        = flip evalState initialState . runErrorT
+          initialState = TIState { tiSupply = 0 }
+
+emptyEnv :: TypeEnv
+emptyEnv = TypeEnv Map.empty
+
+
+-- Pretty Printing 
+
+instance Show Type where
+    showsPrec _ = shows . prType
+
+prType ::  Type -> PP.Doc
+prType (TVar a)    =   PP.text a
+prType TInt        =   PP.text "Int"
+prType TBool       =   PP.text "Bool"
+prType (TFun t s)  =   prParenType t PP.<+> PP.text "->" PP.<+> prType s
+
+prParenType     ::  Type -> PP.Doc
+prParenType  t  =   case t of
+                        TFun _ _  -> PP.parens (prType t)
+                        _         -> prType t
+
