@@ -39,6 +39,7 @@ data Type = TVar TyVar
           | TInt
           | TBool
           | TFun Type Type
+          | TPair Type Type
           deriving (Eq, Ord)
 
 data Scheme = Scheme [TyVar] Type
@@ -57,10 +58,12 @@ instance Substitutable Type where
     apply _  TBool        = TBool
     apply s  t@(TVar a)   = Map.findWithDefault t a s
     apply s  (TFun t1 t2) = TFun (apply s t1) (apply s t2)
+    apply s  (TPair t1 t2) = TPair (apply s t1) (apply s t2)
     ftv TInt              = Set.empty
     ftv TBool             = Set.empty
     ftv (TVar a)          = Set.singleton a
     ftv (TFun t1 t2)      = (ftv t1) `Set.union` (ftv t2)
+    ftv (TPair t1 t2)      = (ftv t1) `Set.union` (ftv t2)
 
 
 instance Substitutable Scheme where
@@ -167,6 +170,11 @@ unify (TFun l1 r1) (TFun l2 r2) =
        s2 <- unify (apply s1 r1) (apply s1 r2)
        return (s1 ◦ s2)
 
+unify (TPair l1 r1) (TPair l2 r2) =
+    do s1 <- unify l1 l2
+       s2 <- unify (apply s1 r1) (apply s1 r2)
+       return (s1 ◦ s2)
+
 unify (TVar a) t  = varBind a t
 unify t (TVar a)  = varBind a t
 unify TInt TInt   = return nullSubst
@@ -202,6 +210,8 @@ prType (TVar a)    = PP.text a
 prType TInt        = PP.text "Int"
 prType TBool       = PP.text "Bool"
 prType (TFun t s)  = prParenType t PP.<+> PP.text "->" PP.<+> prType s
+prType (TPair t s) = PP.hcat 
+    [PP.text "(", prType t, PP.text "," , prType s, PP.text ")"]  
 
 prParenType :: Type -> PP.Doc
 prParenType t = case t of
