@@ -219,12 +219,3 @@ prParenType t = case t of
                     TFun _ _ -> PP.parens (prType t)
                     _        -> prType t
 
-
-env = TypeEnv $ Map.fromList [ 
-    ("+", Scheme [] (TFun TInt (TFun TInt TInt))),
-    ("*", Scheme [] (TFun TInt (TFun TInt TInt))),
-    ("Pair", Scheme ["a", "b"] (TFun (TVar "a") (TFun (TVar "b") (TPair (TVar "a") (TVar "b")))) ), 
-    ("fst", Scheme ["a", "b"] (TFun (TPair (TVar "a") (TVar "b")) (TVar "a"))),
-    ("snd", Scheme ["a", "b"] (TFun (TPair (TVar "a") (TVar "b")) (TVar "b"))),
-    ("swap", Scheme ["a", "b"] (TFun (TPair (TVar "a") (TVar "b")) (TPair (TVar "b") (TVar "a"))))
-    ]
