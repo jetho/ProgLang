@@ -33,8 +33,8 @@ e0 = (expr, ast)
 
 e1 = (expr, ast) 
     where
-        expr = "((\\x -> (fst x, snd x)) (4, True)"
-        ast  = (EApp (EAbs "x" (EApp (EApp (EVar "Pair") (EApp (EVar "fst") (EVar "x"))) (EApp (EVar "snd") (EVar "x"))) ) (EApp (EApp (EVar "Pair") (ELit $ LInt 4)) (ELit $ LBool True)))
+        expr = "((\\x -> (snd x, fst x)) (4, True)"
+        ast  = (EApp (EAbs "x" (EApp (EApp (EVar "Pair") (EApp (EVar "snd") (EVar "x"))) (EApp (EVar "fst") (EVar "x"))) ) (EApp (EApp (EVar "Pair") (ELit $ LInt 4)) (ELit $ LBool True)))
 
 e2 = (expr, ast)
     where
