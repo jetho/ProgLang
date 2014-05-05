@@ -3,7 +3,7 @@
 {-# LANGUAGE TupleSections #-}
 
 
-module AlgorithmW ( TyVar,
+module TypeInference.AlgorithmW ( TyVar,
                     Exp(..),
                     Type(..),
                     Lit(..),
