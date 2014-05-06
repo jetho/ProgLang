@@ -3,6 +3,7 @@ module TypeInference.AlgorithmW_Test (test) where
 import TypeInference.AlgorithmW
 import Data.Map as Map
 import Control.Arrow (second)
+import Control.Applicative
 
 
 env = TypeEnv $ Map.fromList [ 
@@ -21,15 +22,15 @@ typeInfer e = case typeInference env e of
 
 test = mapM_ (putStrLn . format . resolveType) $ exps
     where 
-          resolveType     = second typeInfer
-          format (s1, s2) = s1 ++ " :: " ++ s2
-          exps            = [e0, e1, e2, e3]
+        resolveType = second typeInfer
+        format      = (++) <$> (++ " :: ") . fst <*> snd
+        exps        = [e0, e1, e2, e3]
 
 
 e0 = (expr, ast)
     where 
-          expr = "(\\x -> (fst x, 4))"
-          ast  = (EAbs "x" (EApp (EApp (EVar "Pair") (EApp (EVar "fst") (EVar "x"))) (ELit $ LInt 4 ))) 
+        expr = "(\\x -> (fst x, 4))"
+        ast  = (EAbs "x" (EApp (EApp (EVar "Pair") (EApp (EVar "fst") (EVar "x"))) (ELit $ LInt 4 ))) 
 
 e1 = (expr, ast) 
     where
