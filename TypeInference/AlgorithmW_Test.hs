@@ -24,7 +24,7 @@ test = mapM_ (putStrLn . format . resolveType) $ exps
     where 
         resolveType = second typeInfer
         format      = (++) <$> (++ " :: ") . fst <*> snd
-        exps        = [e0, e1, e2, e3, e4]
+        exps        = [e0, e1, e2, e3, e4, e5]
 
 
 e0 = (expr, ast)
@@ -51,3 +51,8 @@ e4 = (expr, ast)
     where
         expr = "let swap t = (snd t, fst t) in swap"
         ast  = (ELet "swap" (EAbs "t" (EApp (EApp (EVar "Pair") (EApp (EVar "snd") (EVar "t"))) (EApp (EVar "fst") (EVar "t")))) (EVar "swap"))
+
+e5 = (expr, ast)
+    where
+        expr = "(\\t -> (fst t) + (snd t))"
+        ast  = (EAbs "t" (EApp (EApp (EVar "+") (EApp (EVar "fst") (EVar "t"))) (EApp (EVar "snd") (EVar "t")))) 
