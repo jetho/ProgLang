@@ -1,0 +1,7 @@
+(\x -> (fst x, 4)) :: (a5,a7) -> (a5,Int)
+((\x -> (snd x, fst x)) (4, True) :: (Bool,Int)
+(\x -> (fst x, fst x)) :: (a8,a7) -> (a8,a8)
+let x = snd (3, True) in (x, x) :: (Bool,Bool)
+let swap t = (snd t, fst t) in swap :: (a12,a11) -> (a11,a12)
+(\t -> (fst t) + (snd t)) :: (Int,Int) -> Int
+
