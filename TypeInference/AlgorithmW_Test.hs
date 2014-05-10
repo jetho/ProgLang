@@ -25,7 +25,7 @@ test = mapM_ (putStrLn . format . resolveType) $ exps
     where 
         resolveType = second typeInfer
         format      = (++) <$> (++ " :: ") . fst <*> snd
-        exps        = [e0, e1, e2, e3, e4, e5, e6, e7, e8, e9]
+        exps        = [e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10]
 
 
 e0 = (expr, ast)
@@ -77,3 +77,8 @@ e9 = (expr, ast)
     where 
         expr = "((\\x -> inc(snd x)) (4, True)"
         ast  = (EApp (EAbs "x" (EApp (EVar "inc") (EApp (EVar "snd") (EVar "x")))) (EApp (EApp (EVar "Pair") (ELit $ LInt 4)) (ELit $ LBool True)))
+
+e10 = (expr, ast)
+    where
+        expr = "(\\f -> (f 1) + (f False))"
+        ast  = (EAbs "f" (EApp (EApp (EVar "+") (EApp (EVar "f") (ELit $ LInt 1))) (EApp (EVar "f") (ELit $ LBool False)))) 
