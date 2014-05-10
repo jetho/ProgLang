@@ -35,7 +35,7 @@ e0 = (expr, ast)
 
 e1 = (expr, ast) 
     where
-        expr = "((\\x -> (snd x, fst x)) (4, True)"
+        expr = "(\\x -> (snd x, fst x)) (4, True)"
         ast  = (EApp (EAbs "x" (EApp (EApp (EVar "Pair") (EApp (EVar "snd") (EVar "x"))) (EApp (EVar "fst") (EVar "x"))) ) (EApp (EApp (EVar "Pair") (ELit $ LInt 4)) (ELit $ LBool True)))
 
 e2 = (expr, ast)
@@ -65,17 +65,17 @@ e6 = (expr, ast)
 
 e7 = (expr, ast)
     where 
-        expr = "(\\f -> inc(f 1 2)"
+        expr = "(\\f -> inc(f 1 2))"
         ast  = (EAbs "f" (EApp (EVar "inc") (EApp (EApp (EVar "f") (ELit $ LInt 1)) (ELit $ LInt 2)))) 
 
 e8 = (expr, ast)
     where 
-        expr = "(\\f -> f (f 1)"
+        expr = "(\\f -> f (f 1))"
         ast  = (EAbs "f" (EApp (EVar "f") (EApp (EVar "f") (ELit $ LInt 1)))) 
         
 e9 = (expr, ast)
     where 
-        expr = "((\\x -> inc(snd x)) (4, True)"
+        expr = "(\\x -> inc(snd x)) (4, True)"
         ast  = (EApp (EAbs "x" (EApp (EVar "inc") (EApp (EVar "snd") (EVar "x")))) (EApp (EApp (EVar "Pair") (ELit $ LInt 4)) (ELit $ LBool True)))
 
 e10 = (expr, ast)
@@ -85,10 +85,10 @@ e10 = (expr, ast)
         
 e11 = (expr, ast)
     where 
-        expr = "(\\f -> inc (f f)"
+        expr = "(\\f -> inc (f f))"
         ast  = (EAbs "f" (EApp (EVar "inc") (EApp (EVar "f") (EVar "f")))) 
 
 e12 = (expr, ast)
     where 
-        expr = "(\\x -> x + y"
+        expr = "(\\x -> x + y)"
         ast  = (EAbs "x" (EApp (EApp (EVar "+") (EVar "x")) (EVar "y"))) 
