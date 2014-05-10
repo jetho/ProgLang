@@ -9,6 +9,7 @@ import Control.Applicative
 env = TypeEnv $ Map.fromList [ 
     ("+", Scheme [] (TFun TInt (TFun TInt TInt))),
     ("*", Scheme [] (TFun TInt (TFun TInt TInt))),
+    ("inc", Scheme [] (TFun TInt TInt)),
     ("Pair", Scheme ["a", "b"] (TFun (TVar "a") (TFun (TVar "b") (TPair (TVar "a") (TVar "b")))) ), 
     ("fst", Scheme ["a", "b"] (TFun (TPair (TVar "a") (TVar "b")) (TVar "a"))),
     ("snd", Scheme ["a", "b"] (TFun (TPair (TVar "a") (TVar "b")) (TVar "b"))),
@@ -24,7 +25,7 @@ test = mapM_ (putStrLn . format . resolveType) $ exps
     where 
         resolveType = second typeInfer
         format      = (++) <$> (++ " :: ") . fst <*> snd
-        exps        = [e0, e1, e2, e3, e4, e5, e6]
+        exps        = [e0, e1, e2, e3, e4, e5, e6, e7]
 
 
 e0 = (expr, ast)
@@ -60,4 +61,9 @@ e5 = (expr, ast)
 e6 = (expr, ast)
     where 
         expr = "(\\f -> (f 1, 4))"
-        ast  = (EAbs "f" (EApp (EApp (EVar "Pair") (EApp (EVar "f") (ELit $ LInt 1))) (ELit $ LInt 4 ))) 
+        ast  = (EAbs "f" (EApp (EApp (EVar "Pair") (EApp (EVar "f") (ELit $ LInt 1))) (ELit $ LInt 4))) 
+
+e7 = (expr, ast)
+    where 
+        expr = "(\\f -> inc(f 1 2)"
+        ast  = (EAbs "f" (EApp (EVar "inc") (EApp (EApp (EVar "f") (ELit $ LInt 1)) (ELit $ LInt 2)))) 
