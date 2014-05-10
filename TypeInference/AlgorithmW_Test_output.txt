@@ -6,3 +6,5 @@ let swap t = (snd t, fst t) in swap :: (a12,a11) -> (a11,a12)
 (\t -> (fst t) + (snd t)) :: (Int,Int) -> Int
 (\f -> (f 1, 4)) :: (Int -> a5) -> (a5,Int)
 (\f -> inc(f 1 2) :: (Int -> Int -> Int) -> Int
+(\f -> f (f 1) :: (Int -> Int) -> Int
+((\x -> inc(snd x)) (4, True) :: Type Error: Types not unifiable: Int vs. Bool
