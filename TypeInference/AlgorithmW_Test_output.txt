@@ -9,3 +9,5 @@ let swap t = (snd t, fst t) in swap :: (a12,a11) -> (a11,a12)
 (\f -> f (f 1) :: (Int -> Int) -> Int
 ((\x -> inc(snd x)) (4, True) :: Type Error: Types not unifiable: Int vs. Bool
 (\f -> (f 1) + (f False)) :: Type Error: Types not unifiable: Int vs. Bool
+(\f -> inc (f f) :: Type Error: Circular Type Structure: a0 = a0 -> a2
+(\x -> x + y :: Type Error: Unbound Variable: y
