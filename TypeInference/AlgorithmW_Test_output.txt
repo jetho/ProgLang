@@ -13,3 +13,5 @@ let swap t = (snd t, fst t) in swap :: (a12,a11) -> (a11,a12)
 (\x -> x + y) :: Type Error: Unbound Variable: y
 (\x -> let y = x in y) :: a0 -> a0
 let g y = (let f x = (x=y) in f 1 && f false) in g 2 :: Type Error: Types not unifiable: Int vs. Bool
+(\x -> let y = (\z -> z) in y) :: a0 -> a2 -> a2
+(\x -> let y = (\z -> x z) in y) :: (a1 -> a2) -> a1 -> a2

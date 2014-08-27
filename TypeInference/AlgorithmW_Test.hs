@@ -23,84 +23,77 @@ typeInfer e = case typeInference env e of
                   Left err -> "Type Error: " ++ show err
                   Right t  -> show t
 
-test = mapM_ (putStrLn . format . resolveType) $ exps
+test = mapM_ (putStrLn . format . resolveType) $ tests
     where 
         resolveType = second typeInfer
         format      = (++) <$> (++ " :: ") . fst <*> snd
-        exps        = [e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12, e13, e14]
 
+tests = [
+    (   "(\\x -> (fst x, 4))", 
+        (EAbs "x" (EApp (EApp (EVar "Pair") (EApp (EVar "fst") (EVar "x"))) (ELit $ LInt 4 )))
+    ),
 
-e0 = (expr, ast)
-    where 
-        expr = "(\\x -> (fst x, 4))"
-        ast  = (EAbs "x" (EApp (EApp (EVar "Pair") (EApp (EVar "fst") (EVar "x"))) (ELit $ LInt 4 ))) 
+    (   "(\\x -> (snd x, fst x)) (4, True)", 
+        (EApp (EAbs "x" (EApp (EApp (EVar "Pair") (EApp (EVar "snd") (EVar "x"))) (EApp (EVar "fst") (EVar "x"))) ) (EApp (EApp (EVar "Pair") (ELit $ LInt 4)) (ELit $ LBool True)))
+    ),
 
-e1 = (expr, ast) 
-    where
-        expr = "(\\x -> (snd x, fst x)) (4, True)"
-        ast  = (EApp (EAbs "x" (EApp (EApp (EVar "Pair") (EApp (EVar "snd") (EVar "x"))) (EApp (EVar "fst") (EVar "x"))) ) (EApp (EApp (EVar "Pair") (ELit $ LInt 4)) (ELit $ LBool True)))
+    (   "(\\x -> (fst x, fst x))",
+        (EAbs "x" (EApp (EApp (EVar "Pair") (EApp (EVar "fst") (EVar "x"))) (EApp (EVar "fst") (EVar "x"))))    
+    ),
 
-e2 = (expr, ast)
-    where
-        expr = "(\\x -> (fst x, fst x))"
-        ast  = (EAbs "x" (EApp (EApp (EVar "Pair") (EApp (EVar "fst") (EVar "x"))) (EApp (EVar "fst") (EVar "x"))) ) 
+    (   "let x = snd (3, True) in (x, x)",
+        (ELet "x" (EApp (EVar "snd") (EApp (EApp (EVar "Pair") (ELit $ LInt 3)) (ELit $ LBool True))) (EApp (EApp (EVar "Pair") (EVar "x")) (EVar "x" )))
+    ),
 
-e3 = (expr, ast)
-    where
-        expr = "let x = snd (3, True) in (x, x)"
-        ast  = (ELet "x" (EApp (EVar "snd") (EApp (EApp (EVar "Pair") (ELit $ LInt 3)) (ELit $ LBool True))) (EApp (EApp (EVar "Pair") (EVar "x")) (EVar "x" )))  
+    (   "let swap t = (snd t, fst t) in swap",
+        (ELet "swap" (EAbs "t" (EApp (EApp (EVar "Pair") (EApp (EVar "snd") (EVar "t"))) (EApp (EVar "fst") (EVar "t")))) (EVar "swap"))
+    ),
 
-e4 = (expr, ast)
-    where
-        expr = "let swap t = (snd t, fst t) in swap"
-        ast  = (ELet "swap" (EAbs "t" (EApp (EApp (EVar "Pair") (EApp (EVar "snd") (EVar "t"))) (EApp (EVar "fst") (EVar "t")))) (EVar "swap"))
-
-e5 = (expr, ast)
-    where
-        expr = "(\\t -> (fst t) + (snd t))"
-        ast  = (EAbs "t" (EApp (EApp (EVar "+") (EApp (EVar "fst") (EVar "t"))) (EApp (EVar "snd") (EVar "t")))) 
+    (   "(\\t -> (fst t) + (snd t))",
+        (EAbs "t" (EApp (EApp (EVar "+") (EApp (EVar "fst") (EVar "t"))) (EApp (EVar "snd") (EVar "t")))) 
+    ),
         
-e6 = (expr, ast)
-    where 
-        expr = "(\\f -> (f 1, 4))"
-        ast  = (EAbs "f" (EApp (EApp (EVar "Pair") (EApp (EVar "f") (ELit $ LInt 1))) (ELit $ LInt 4))) 
+    (   "(\\f -> (f 1, 4))",
+        (EAbs "f" (EApp (EApp (EVar "Pair") (EApp (EVar "f") (ELit $ LInt 1))) (ELit $ LInt 4))) 
+    ),
 
-e7 = (expr, ast)
-    where 
-        expr = "(\\f -> inc(f 1 2))"
-        ast  = (EAbs "f" (EApp (EVar "inc") (EApp (EApp (EVar "f") (ELit $ LInt 1)) (ELit $ LInt 2)))) 
+    (   "(\\f -> inc(f 1 2))",
+        (EAbs "f" (EApp (EVar "inc") (EApp (EApp (EVar "f") (ELit $ LInt 1)) (ELit $ LInt 2)))) 
+    ),
 
-e8 = (expr, ast)
-    where 
-        expr = "(\\f -> f (f 1))"
-        ast  = (EAbs "f" (EApp (EVar "f") (EApp (EVar "f") (ELit $ LInt 1)))) 
+    (   "(\\f -> f (f 1))",
+        (EAbs "f" (EApp (EVar "f") (EApp (EVar "f") (ELit $ LInt 1)))) 
+    ),
         
-e9 = (expr, ast)
-    where 
-        expr = "(\\x -> inc(snd x)) (4, True)"
-        ast  = (EApp (EAbs "x" (EApp (EVar "inc") (EApp (EVar "snd") (EVar "x")))) (EApp (EApp (EVar "Pair") (ELit $ LInt 4)) (ELit $ LBool True)))
+    (   "(\\x -> inc(snd x)) (4, True)",
+        (EApp (EAbs "x" (EApp (EVar "inc") (EApp (EVar "snd") (EVar "x")))) (EApp (EApp (EVar "Pair") (ELit $ LInt 4)) (ELit $ LBool True)))
+    ),
 
-e10 = (expr, ast)
-    where
-        expr = "(\\f -> (f 1) + (f False))"
-        ast  = (EAbs "f" (EApp (EApp (EVar "+") (EApp (EVar "f") (ELit $ LInt 1))) (EApp (EVar "f") (ELit $ LBool False)))) 
+    (   "(\\f -> (f 1) + (f False))",
+        (EAbs "f" (EApp (EApp (EVar "+") (EApp (EVar "f") (ELit $ LInt 1))) (EApp (EVar "f") (ELit $ LBool False)))) 
+    ),
         
-e11 = (expr, ast)
-    where 
-        expr = "(\\f -> inc (f f))"
-        ast  = (EAbs "f" (EApp (EVar "inc") (EApp (EVar "f") (EVar "f")))) 
+    (   "(\\f -> inc (f f))",
+        (EAbs "f" (EApp (EVar "inc") (EApp (EVar "f") (EVar "f")))) 
+    ),
 
-e12 = (expr, ast)
-    where 
-        expr = "(\\x -> x + y)"
-        ast  = (EAbs "x" (EApp (EApp (EVar "+") (EVar "x")) (EVar "y"))) 
+    (   "(\\x -> x + y)",
+        (EAbs "x" (EApp (EApp (EVar "+") (EVar "x")) (EVar "y"))) 
+    ),
 
-e13 = (expr, ast)
-    where
-        expr = "(\\x -> let y = x in y)"
-        ast  = (EAbs "x" (ELet "y" (EVar "x") (EVar "y")))
+    (   "(\\x -> let y = x in y)",
+        (EAbs "x" (ELet "y" (EVar "x") (EVar "y")))
+    ),
 
-e14 = (expr, ast)
-    where
-        expr = "let g y = (let f x = (x=y) in f 1 && f false) in g 2"
-        ast  = (ELet "g" (EAbs "y" (ELet "f" (EAbs "x" (EApp (EApp (EVar "=") (EVar "x")) (EVar "y"))) (EApp (EApp (EVar "&&") (EApp (EVar "f") (ELit $ LInt 1))) (EApp (EVar "f") (ELit $ LBool False))))) (EApp (EVar "g") (ELit $ LInt 2)))
+    (   "let g y = (let f x = (x=y) in f 1 && f false) in g 2",
+        (ELet "g" (EAbs "y" (ELet "f" (EAbs "x" (EApp (EApp (EVar "=") (EVar "x")) (EVar "y"))) (EApp (EApp (EVar "&&") (EApp (EVar "f") (ELit $ LInt 1))) (EApp (EVar "f") (ELit $ LBool False))))) (EApp (EVar "g") (ELit $ LInt 2)))
+    ),
+
+    (   "(\\x -> let y = (\\z -> z) in y)",
+        (EAbs "x" (ELet "y" (EAbs "z" (EVar "z")) (EVar "y")))
+    ),
+        
+    (   "(\\x -> let y = (\\z -> x z) in y)",
+        (EAbs "x" (ELet "y" (EAbs "z" (EApp (EVar "x") (EVar "z"))) (EVar "y")))
+    )
+    ]
