@@ -26,4 +26,3 @@ eval1 ctx t                              = t
 eval ctx t = if t==t' then t else eval1 ctx t'
     where t' = eval1 ctx t
 
-
