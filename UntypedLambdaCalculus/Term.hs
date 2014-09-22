@@ -10,7 +10,7 @@ data Term
 
 isVal :: Term -> Bool
 isVal (Abs _ _) = True
-isVal _        = False
+isVal _         = False
      
 printTerm (Abs x t1) ctx = "(λ" ++ x' ++ "." ++ (printTerm t1 ctx') ++ ")"
     where (ctx', x') = pickFreshName ctx x
